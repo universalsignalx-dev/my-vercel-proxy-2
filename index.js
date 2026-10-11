@@ -23,7 +23,8 @@ const NEZHA_KEY = process.env.NEZHA_KEY || '';
 const DOMAIN = process.env.DOMAIN || 'your-domain.com';    
 const AUTO_ACCESS = process.env.AUTO_ACCESS || false;      
 const SUB_PATH = process.env.SUB_PATH || 'vercel';           
-const NAME = process.env.NAME || 'Vercel';                       
+const NAME = process.env.NAME || 'Vercel';
+const ENDPOINTS = (process.env.ENDPOINTS || '').split(',').map(x => x.trim()).filter(Boolean);                       
 const PORT = process.env.PORT || 3000;                    
 
 // NZ-Agent
@@ -122,7 +123,11 @@ const httpServer = http.createServer(async (req, res) => {
     const troURL = `trojan://${UUID}@${CurrentDomain}:${CurrentPort}?security=${tlsParam}&sni=${CurrentDomain}&fp=chrome&type=ws&host=${CurrentDomain}&path=%2F${WSPATH}#${namePart}`;
     const ssMethodPassword = Buffer.from(`none:${UUID}`).toString('base64');
     const ssURL = `ss://${ssMethodPassword}@${CurrentDomain}:${CurrentPort}?plugin=v2ray-plugin;mode%3Dwebsocket;host%3D${CurrentDomain};path%3D%2F${WSPATH};${ssTlsParam}sni%3D${CurrentDomain};skip-cert-verify%3Dtrue;mux%3D0#${namePart}`;
-    const subscription = vlsURL + '\n' + troURL + '\n' + ssURL;
+    const extraURLs = ENDPOINTS.map((ep, i) => {
+      const [addr, port = CurrentPort] = ep.split(':');
+      return `vless://${UUID}@${addr}:${port}?encryption=none&security=${tlsParam}&sni=${CurrentDomain}&fp=chrome&type=ws&host=${CurrentDomain}&path=%2F${WSPATH}#${NAME}-${i + 1}-${addr}`;
+    });
+    const subscription = [vlsURL, troURL, ssURL, ...extraURLs].join('\n');
     const base64Content = Buffer.from(subscription).toString('base64');
 
     res.writeHead(200, { 'Content-Type': 'text/plain' });
